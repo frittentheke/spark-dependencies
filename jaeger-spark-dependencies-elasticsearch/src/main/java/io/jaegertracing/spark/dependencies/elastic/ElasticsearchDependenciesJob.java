@@ -60,6 +60,7 @@ public class ElasticsearchDependenciesJob {
     Boolean nodesWanOnly = Boolean.parseBoolean(Utils.getEnv("ES_NODES_WAN_ONLY", "false"));
     String indexPrefix = Utils.getEnv("ES_INDEX_PREFIX", null);
     String spanRange = Utils.getEnv("ES_TIME_RANGE", "24h");
+    Boolean useReadAlias = Boolean.parseBoolean(Utils.getEnv("ES_USE_READ_ALIAS", "false"));
 
     final Map<String, String> sparkProperties = new LinkedHashMap<>();
 
@@ -166,6 +167,7 @@ public class ElasticsearchDependenciesJob {
   private final SparkConf conf;
   private final String indexPrefix;
   private final String spanRange;
+  private final Boolean useReadAlias;
 
   ElasticsearchDependenciesJob(Builder builder) {
     this.day = builder.day;
@@ -195,6 +197,7 @@ public class ElasticsearchDependenciesJob {
     }
     this.indexPrefix = builder.indexPrefix;
     this.spanRange = builder.spanRange;
+    this.useReadAlias = builder.useReadAlias;
   }
 
   /**
@@ -209,7 +212,12 @@ public class ElasticsearchDependenciesJob {
   }
 
   public void run(String peerServiceTag) {
-    run(indexDate("jaeger-span"), indexDate("jaeger-dependencies") ,peerServiceTag);
+	  if (this.useReadAlias) {
+		  run(new String[]{prefix(indexPrefix) + "jaeger-span-read", prefixBefore19(indexPrefix) + "jaeger-span-read"}, indexDate("jaeger-dependencies") ,peerServiceTag);
+    }
+	  else {
+		  run(indexDate("jaeger-span"), indexDate("jaeger-dependencies") ,peerServiceTag);
+	  }
   }
 
   String[] indexDate(String index) {
